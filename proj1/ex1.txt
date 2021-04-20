@@ -1,0 +1,24 @@
+MODULE main
+
+VAR
+	q: boolean;
+	r: boolean;
+
+ASSIGN
+	init(q) := FALSE;
+	init(r) := FALSE;
+
+	next(q) := case
+			q=FALSE & r=FALSE : {FALSE, TRUE};
+			q=TRUE & r=TRUE:  FALSE;
+			q=FALSE & r=TRUE: FALSE;
+			TRUE: q;
+		   esac;
+	next(r) := case
+			q=FALSE & r=FALSE : TRUE;
+			q=TRUE & r=TRUE : FALSE;
+			q=FALSE & r=TRUE: TRUE;
+			TRUE: r;
+		   esac;
+
+SPEC AX (AX (AX (!q & r)))
