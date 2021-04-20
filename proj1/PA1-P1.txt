@@ -1,0 +1,51 @@
+-- Property is proved to be violated
+
+-- At first, the train is stopped and its door is closed.
+-- The driver sends the accelerate signal and sends the open signal at same time,
+-- then the train state is accelerating and the door state is opening.
+-- The statement that doors are always closed unless the train is stopped is false.
+
+
+---------------------------------------main---------------------------------------
+MODULE main
+VAR
+	t : process train;
+
+SPEC AG(!(t.trainState = stopped) -> AG(t.doorState = closed))
+
+
+---------------------------------------train---------------------------------------
+MODULE train
+
+VAR
+	trainMotion : {accelerate, break, noMotion};
+	doorMotion : {openSignal, closeSignal, noMotion};
+	doorState : {open, closed, opening, closing};
+	trainState : {stopped, steady, accelerating, decelerating};
+
+ASSIGN
+	init(doorState) := closed;
+	init(trainState) := stopped;
+
+	next(trainState) := case
+			(trainState = stopped) & (doorState = closed) & (trainMotion = accelerate) : accelerating;
+			(trainState = accelerating) & (trainMotion = break) : decelerating;
+			(trainState = accelerating) & ((trainMotion = noMotion) | (trainMotion = accelerate)) : {accelerating, steady};
+			
+			(trainState = decelerating) & (trainMotion = accelerate) : accelerating;
+			(trainState = decelerating) & ((trainMotion = noMotion) | (trainMotion = break)) : {decelerating, stopped};
+
+			(trainState = steady) & (trainMotion = break) : decelerating;
+			(trainState = steady) & (trainMotion = noMotion) | (trainMotion = accelerate) : steady;
+			TRUE : trainState;
+		       esac;
+
+	next(doorState) := case
+			(doorState = closed) & (trainState = stopped) & (doorMotion = openSignal) : opening;
+			(doorState = opening) & (doorMotion = closeSignal) : closing;
+			(doorState = opening) & (doorMotion = noMotion) : open;
+			(doorState = closing) & (doorMotion = openSignal) : opening;
+			(doorState = closing) & (doorMotion = noMotion) : closed;
+			(doorState = open) & (doorMotion = closeSignal) : closing;
+			TRUE: doorState;
+		      esac;	

@@ -1,0 +1,103 @@
+
+-- There exists a plan that will enable the Fett sisters to take their respective padawans from Isi to Iju.
+
+-- Xoba:        Isi			     -> Iju
+-- Yoba:        Isi			     -> Iju -> Isi -> Iju
+-- Zoba:        Isi					  -> Iju
+-- XobaPadawan: Isi -> Iju					 -> Isi -> Iju
+-- YobaPadawan: Isi               -> Iju		    -> Isi	        -> Iju -> Isi -> Iju
+-- ZobaPadawan: Isi -> Iju -> Isi -> Iju -> Isi					     -> Iju
+
+
+-- Explain the simple diagram above,
+-- Xoba's pandawan and Zoba's pandawan go Iju,
+-- only Xoba's pandawan backs Isi,
+-- Xoba's pandawan and Zoba's pandawan go Iju,
+-- only Xoba's pandawan backs Isi,
+-- Xoba and Yoba go Iju,
+-- Yoba and YobaPadawan back Isi,
+-- Yoba and Zoba go Iju,
+-- only XobaPadawan backs Isi,
+-- XobaPadawan and YobaPadawan go Iju,
+-- only YobaPadawan backs Isi,
+-- XobaPadawan and YobaPadawan go Iju.
+
+
+MODULE main
+
+VAR
+	-- Capital and Lowercase to distinguish such as Xoba and xoba.
+
+	Xoba : {Isi, Iju};
+	Yoba : {Isi, Iju};
+	Zoba : {Isi, Iju};
+	Xobapadawans : {Isi, Iju};
+	Yobapadawans : {Isi, Iju};
+	Zobapadawans : {Isi, Iju};
+	vessel : {Isi, Iju};
+	driver : {xoba, yoba, zoba, xobapadawans, yobapadawans, zobapadawans};
+	passenger : {xoba, yoba, zoba, xobapadawans, yobapadawans, zobapadawans, noPassenger};
+
+ASSIGN
+	init(Xoba) := Isi;
+	init(Yoba) := Isi;
+	init(Zoba) := Isi;
+	init(Xobapadawans) := Isi;
+	init(Yobapadawans) := Isi;
+	init(Zobapadawans) := Isi;
+
+	next(Xoba) := case
+			(vessel = Isi) & (Xoba = Isi) & (driver = xoba | passenger = xoba) : Iju;
+			(vessel = Iju) & (Xoba = Iju) & (driver = xoba | passenger = xoba) : Isi;
+			TRUE : Xoba;
+		      esac;
+
+	next(Yoba) := case
+			(vessel = Isi) & (Yoba = Isi) & (driver = yoba | passenger = yoba) : Iju;
+			(vessel = Iju) & (Yoba = Iju) & (driver = yoba | passenger = yoba) : Isi;
+			TRUE : Yoba;
+		      esac;
+
+	next(Zoba) := case
+			(vessel = Isi) & (Zoba = Isi) & (driver = zoba | passenger = zoba) : Iju;
+			(vessel = Iju) & (Zoba = Iju) & (driver = zoba | passenger = zoba) : Isi;
+			TRUE : Zoba;
+		      esac;
+
+	next(Xobapadawans) := case
+			(vessel = Isi) & (Xobapadawans = Isi) & (driver = xobapadawans | passenger = xobapadawans) : Iju;
+			(vessel = Iju) & (Xobapadawans = Iju) & (driver = xobapadawans | passenger = xobapadawans) : Isi;
+			TRUE : Xobapadawans;
+			     esac;
+
+	next(Yobapadawans) := case
+			(vessel = Isi) & (Yobapadawans = Isi) & (driver = yobapadawans | passenger = yobapadawans) : Iju;
+			(vessel = Iju) & (Yobapadawans = Iju) & (driver = yobapadawans | passenger = yobapadawans) : Isi;
+			TRUE : Yobapadawans;
+			     esac;
+
+	next(Zobapadawans) := case
+			(vessel = Isi) & (Zobapadawans = Isi) & (driver = zobapadawans | passenger = zobapadawans) : Iju;
+			(vessel = Iju) & (Zobapadawans = Iju) & (driver = zobapadawans | passenger = zobapadawans) : Isi;
+			TRUE : Zobapadawans;
+			     esac;
+
+	next(vessel) := case
+			(vessel = Isi) : Iju;
+			(vessel = Iju) : Isi;
+			TRUE : vessel;
+		        esac;
+
+
+--SPEC	! E [((!(driver = passenger)) & (((Xobapadawans = Yoba) | (Xobapadawans = Zoba)) -> (Xobapadawans = Xoba)) & (((Yobapadawans = Xoba) | (Yobapadawans = Zoba)) -> (Yobapadawans = Yoba)) & (((Zobapadawans = Yoba) | (Zobapadawans = Xoba)) -> (Zobapadawans = Zoba)) & (driver = xoba -> Xoba = vessel) & (driver = yoba -> Yoba = vessel) & (driver = zoba -> Zoba = vessel) & (driver = xobapadawans -> Xobapadawans = vessel) & (driver = yobapadawans -> Yobapadawans = vessel) & (driver = zobapadawans -> Zobapadawans = vessel) & (passenger = xoba -> Xoba = vessel) & (passenger = yoba -> Yoba = vessel) & (passenger = zoba -> Zoba = vessel) & (passenger = xobapadawans -> Xobapadawans = vessel) & (passenger = yobapadawans -> Yobapadawans = vessel) & (passenger = zobapadawans -> Zobapadawans = vessel)) U (Xoba = Iju & Yoba = Iju & Zoba = Iju & Xobapadawans = Iju & Zobapadawans = Iju & Zobapadawans = Iju)]
+
+
+SPEC  ! E [ (((Xobapadawans = Yoba | Xobapadawans = Zoba) -> (Xobapadawans = Xoba)) & ((Yobapadawans = Xoba | Yobapadawans = Zoba) -> (Yobapadawans = Yoba)) & ((Zobapadawans= Xoba | Zobapadawans = Yoba) -> (Zobapadawans = Zoba))  & (driver = xoba -> Xoba = vessel) & ((driver = yoba) -> (Yoba = vessel)) & (driver = zoba -> Zoba = vessel) & (driver = xobapadawans -> Xobapadawans = vessel) & (driver = yobapadawans -> Yobapadawans = vessel) & (driver = zobapadawans -> Zobapadawans = vessel) & (passenger = xoba -> Xoba = vessel) & (passenger = yoba -> Yoba = vessel) & (passenger = zoba -> Zoba = vessel) & (passenger = xobapadawans -> Xobapadawans = vessel) & (passenger = yobapadawans -> Yobapadawans = vessel) & (passenger = zobapadawans -> Zobapadawans = vessel) & (!(driver = passenger))) U (Xoba = Iju & Yoba = Iju & Zoba = Iju & Xobapadawans = Iju & Yobapadawans = Iju & Zobapadawans = Iju)]
+
+
+
+
+
+
+
+
