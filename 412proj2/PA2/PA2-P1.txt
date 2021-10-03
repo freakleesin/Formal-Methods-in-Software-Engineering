@@ -1,0 +1,142 @@
+/*
+
+When Alice sets up a connection to B, Bob does not know whether the key he is sharing is fresh or not, 
+the Intruder can easily simulate it, it's the Needham-Schroeder protocol weakness.
+The issue may be solved if we add the identity of the responder within the encrypted part of message 2
+Then the Intruder cannot simulate it, because I's identity is required.
+
+
+Usage:
+	./spin -a PA2-P1-rundil.txt
+	gcc -o pan pan.c
+	./pan -a
+	./spin -t PA2-P1-rundil.txt
+
+*/
+mtype = { ok, err, msg1, msg2, msg3, keyA, keyB, keyI, agentA, agentB, agentI, nonceA, nonceB, nonceI };
+
+typedef Crypt { mtype key, data1, data2 };
+
+chan network = [0] of { mtype,   /* msg# */mtype,   /* receiver */Crypt };
+
+mtype partnerA;
+mtype statusA = err;
+
+active proctype Alice() {
+	mtype  pkey, pnonce;
+	Crypt  data;
+	Crypt msgA;
+
+	if /* choose a partner for this run */
+	:: partnerA = agentB; pkey = keyB;
+	:: partnerA = agentI; pkey = keyI;
+	fi;
+
+	msgA.key = pkey;
+	msgA.data1 = agentA;
+	msgA.data2 = nonceA;
+
+	network ! msg1, partnerA, msgA;
+	network ? (msg1, agentB, data);
+	(data.key == keyA) && (data.data1 == nonceA);
+	pnonce = data.data2;
+
+	msgA.key = pkey;
+	msgA.data1 = pnonce;
+	msgA.data2 = 0;
+	network ! msg3, partnerA, msgA;
+
+	statusA = ok;
+}
+
+
+/* -------------Bob------------*/
+mtype partnerB;
+mtype statusB = err;
+
+active proctype Bob() {
+	mtype  pkey, pnonce;
+	Crypt  data;
+	Crypt msgB;
+
+	if /* choose a partner for this run */
+	:: partnerB = agentA; pkey = keyA;
+	:: partnerB = agentI; pkey = keyI;
+	fi;
+
+	network ? (msg1, agentB, data);
+	(data.key == keyB) && (data.data1 == agentA);
+	pnonce = data.data2;
+
+	msgB.key = pkey;
+	msgB.data1 = pnonce;
+	msgB.data2 = nonceB;
+	network ! msg3, partnerB, msgB;
+	network ? (msg3, agentB, data); 
+	(data.key == keyB) && (data.data1 == nonceB);
+	statusB = ok;
+}
+
+bool  knows_nonceA, knows_nonceB;
+active proctype Intruder() {
+	mtype msg, recpt;
+	Crypt intercepted;
+	Crypt data;
+	do
+	:: network ? (msg, _, data) ->
+		if /* perhaps store the message */
+		:: intercepted.data1 = data.data1; intercepted.data2 = data.data2; intercepted.key = data.key;
+		:: skip;
+		fi;
+		if /* record newly learnt nonces */
+		:: (data.key == keyI) ->
+			if
+			:: (data.data1 == nonceA) || (data.data2 == nonceA)
+				-> knows_nonceA = true;
+			:: else -> skip;
+			fi;
+			/* similar for knows_nonceB */
+		:: else -> skip;
+		fi;
+	:: /* Replay or send a message */
+		if /* choose message type */
+		:: msg = msg1;
+		:: msg = msg2;
+		:: msg = msg3;
+		fi;
+		if /* choose recipient */
+		:: recpt = agentA;
+		:: recpt = agentB;
+		fi;
+		if /* replay intercepted message or assemble it */
+		:: data.data1 = intercepted.data1; data.data2 = intercepted.data2; data.key = intercepted.key;
+		:: if
+			:: data.data1 = agentA;
+			:: data.data1 = agentB;
+			:: data.data1 = agentI;
+			:: knows_nonceA -> data.data1 = nonceA;
+			:: knows_nonceB -> data.data1 = nonceB;
+			:: data.data1 = nonceI;
+			fi;
+			/* similar for data.info2 and data.key */
+		:: if
+			:: data.data2 = agentA;
+			:: data.data2 = agentB;
+			:: data.data2 = agentI;
+			:: knows_nonceA -> data.data2 = nonceA;
+			:: knows_nonceB -> data.data2 = nonceB;
+			:: data.data2 = nonceI;
+			fi;
+		:: if
+			:: data.key = keyA;
+			:: data.key = keyB;
+			:: data.key = keyI;
+			fi;
+		fi;
+		network ! msg, recpt, data;
+	od;
+}
+
+#define spec1 (statusA == ok && statusB == ok)
+#define spec2 (partnerA == agentB && partnerB == agentA)
+ltl parameter { [](spec1 -> spec2)}

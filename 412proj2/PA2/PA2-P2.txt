@@ -1,0 +1,118 @@
+/*
+
+Usage:
+	./spin -a PA2-P2-rundil.txt
+	gcc -o pan pan.c
+	./pan -a -N cross
+	./spin -t PA2-P2-rundil.txt
+
+What I implemented in 'moves()' is writing every situation for those six frogs.
+Because there are only six frogs, it's easy to write every move/jump.
+And the LTL spec is !(F(successfulCross)), this TLT formula will give us a counter example.
+The counter example will show how the frog progresses to the destination.
+
+I got this counter example:
+
+		1	1	1	0	2	2	2	
+		1	1	0	1	2	2	2	
+		1	1	2	1	0	2	2	
+		1	1	2	1	2	0	2	
+		1	1	2	0	2	1	2	
+		1	0	2	1	2	1	2	
+		0	1	2	1	2	1	2	
+		2	1	0	1	2	1	2	
+		2	1	2	1	0	1	2	
+		2	1	2	1	2	1	0	
+		2	1	2	1	2	0	1	
+		2	1	2	0	2	1	1	
+		2	0	2	1	2	1	1
+		2	2	0	1	2	1	1
+		2	2	2	1	0	1	1	
+		2	2	2	0	1	1	1	
+
+All frogs move/jump forward, and left three are Yellow frogs(2) and right three are Green frogs(1).
+
+*/
+
+int position[7]; /* 0: no frog in the position; 1: green frogs in the position; 2: yellow frogs in the position */
+
+
+/*
+   The move function: 
+   pos1: current position of a frog
+   pos2: new position of the frog
+   frog: 1 for green frog
+         2 for yellow frog
+
+   You will involve this function from the process "moves". This will 
+   help you to review the plan from the counter-example trace. 
+
+   The function has three parameters
+   pos1: position from where a frog is moving
+   pos2: position to which the frog is moving
+   frog: 1 or 2 depending on the type of the frog
+
+*/
+#define move(pos1, pos2, frog) atomic{ printf("Frog %d moves from %d to %d\n", frog, pos1, pos2); position[pos1] = 0; position[pos2] = frog; }
+
+/*
+   Specification of moves():
+   Repeat forever:
+     Non-deterministically selects some position. If the frog in that position can move, then the position of the frog is updated
+     by invoking the "move" function above. 
+*/
+proctype moves()
+{ 
+/* ASSIGNMENT: Write the implementation of moves here */
+
+
+	do
+	/* Green frog moves/jumps forward */
+	::((position[0] == 1) && (position[1] == 0)) -> move(0,1,1)
+	::((position[0] == 1) && (position[2] == 0)) -> move(0,2,1)
+	::((position[1] == 1) && (position[2] == 0)) -> move(1,2,1)
+	::((position[1] == 1) && (position[3] == 0)) -> move(1,3,1)
+	::((position[2] == 1) && (position[3] == 0)) -> move(2,3,1)
+	::((position[2] == 1) && (position[4] == 0)) -> move(2,4,1)
+	::((position[3] == 1) && (position[4] == 0)) -> move(3,4,1)
+	::((position[3] == 1) && (position[5] == 0)) -> move(3,5,1)
+	::((position[4] == 1) && (position[5] == 0)) -> move(4,5,1)
+	::((position[4] == 1) && (position[6] == 0)) -> move(4,6,1)
+	::((position[5] == 1) && (position[6] == 0)) -> move(5,6,1)
+
+	/*Yellow frog moves/jumps forward*/
+	::((position[6] == 2) && (position[5] == 0)) -> move(6,5,2)
+	::((position[6] == 2) && (position[4] == 0)) -> move(6,4,2)
+	::((position[5] == 2) && (position[4] == 0)) -> move(5,4,2)
+	::((position[5] == 2) && (position[3] == 0)) -> move(5,3,2)
+	::((position[4] == 2) && (position[3] == 0)) -> move(4,3,2)
+	::((position[4] == 2) && (position[2] == 0)) -> move(4,2,2)
+	::((position[3] == 2) && (position[2] == 0)) -> move(3,2,2)
+	::((position[3] == 2) && (position[1] == 0)) -> move(3,1,2)
+	::((position[2] == 2) && (position[1] == 0)) -> move(2,1,2)
+	::((position[2] == 2) && (position[0] == 0)) -> move(2,0,2)
+	::((position[1] == 2) && (position[0] == 0)) -> move(1,0,2)
+	od
+  
+}
+
+init 
+{
+   /* Initial position of all frogs: position[3] = 0 */
+   position[0] = 1;  
+   position[1] = 1;
+   position[2] = 1;
+   position[4] = 2;
+   position[5] = 2;
+   position[6] = 2;
+
+   run moves();
+}
+
+#define successfulCross ((position[0] == 2) && (position[1] == 2) && (position[2] == 2) && (position[3] == 0) && (position[4] == 1) && (position[5] == 1) && (position[6] == 1))
+
+ltl cross {!(<>(successfulCross))}
+
+/* ASSIGNMENT: Write an LTL property such that violation of the property produces a counter-example showing
+   the solution to the problem. 
+*/
